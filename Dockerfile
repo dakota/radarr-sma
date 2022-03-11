@@ -1,8 +1,8 @@
-ARG ffmpeg_tag=4.2-ubuntu
+ARG ffmpeg_tag=4.3-nvidia1804
 ARG radarr_tag=latest
 FROM jrottenberg/ffmpeg:${ffmpeg_tag} as ffmpeg
 FROM linuxserver/radarr:${radarr_tag}
-LABEL maintainer="mdhiggins <mdhiggins23@gmail.com>"
+LABEL maintainer="dakotairene"
 
 # Add files from ffmpeg
 COPY --from=ffmpeg /usr/local/ /usr/local/
@@ -10,6 +10,7 @@ COPY --from=ffmpeg /usr/local/ /usr/local/
 ENV SMA_PATH /usr/local/sma
 ENV SMA_RS Radarr
 ENV SMA_UPDATE false
+ENV LD_LIBRARY_PATH /usr/local/cuda/lib64
 
 # get python3 and git, and install python libraries
 RUN \
@@ -43,7 +44,7 @@ RUN \
 
 RUN \
 	apt-get update -y && \
-	apt-get install -y --no-install-recommends libva-drm2 libva2 i965-va-driver && \
+	apt-get install -y --no-install-recommends libva-drm2 libva2 && \
   rm -rf \
     /tmp/* \
     /var/lib/apt/lists/* \
