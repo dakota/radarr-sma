@@ -6,8 +6,9 @@ Docker container for Radarr that includes all FFMPEG and python requirements to 
 |Tag|Description|
 |---|---|
 |latest|Stable release from Radarr with precompiled FFMPEG binaries|
-|build|Stable release from Radarr with FFMPEG compiled from jrottenberg/ffmpeg|
+|develop|Develop release from Radarr with precompiled FFMPEG binaries|
 |nightly|Nightly release from Radarr with precompiled FFMPEG binaries|
+|build|Stable release from Radarr with FFMPEG compiled from jrottenberg/ffmpeg|
 
 ## Usage
 
@@ -15,7 +16,7 @@ Docker container for Radarr that includes all FFMPEG and python requirements to 
 As of 3/9/2020 the containers were overhauled and the location of the script was changed from `/usr/local/bin/sma/sickbeard_mp4_automator` to `/usr/local/sma`. The autoProcess mount point has been modified as well to be more docker friendly in a `/usr/local/sma/config` directory. Please review and update accordingly.
 
 ### docker-compose
-~~~
+~~~yml
 services:
   radarr:
     image: mdhiggins/radarr-sma
@@ -78,6 +79,10 @@ Located at `/usr/local/sma/config/sma.log` inside the container and your mounted
 |HOST|Local IP address for callback requests, default `127.0.0.1`|
 |SMA_PATH|`/usr/local/sma`|
 |SMA_UPDATE|Default `false`. Set `true` to pull git update of SMA on restart|
+|SMA_FFMPEG_URL|Defaults to latest static build from https://johnvansickle.com but can override by changing this var|
+|SMA_STRIP_COMPONENTS|Default `1`. Number of components to strip from your tar.xz file when extracting so that FFmpeg binaries land in `/usr/local/bin`|
+|SMA_HWACCEL|Default `false`. Set `true` to pull additional packages used for hardare acceleration (will require custom FFmpeg binaries)|
+|SMA_USE_REPO|Default `false`. Set `true` to download FFMPEG binaries for default repository (will likely be older versions)|
 
 ## Special Considerations
 Using the `build` tag leverages mulit-stage docker builds to generate FFMPEG compiled using [jrottenberg/ffmpeg's](https://hub.docker.com/r/jrottenberg/ffmpeg) containers. This allows flexibility with building FFMPEG using special options such as VAAPI or NVENC. Building locally allows `ARG` values to be set to change the underlying parent container tags as below. It is recommended that you match your Ubuntu version in the ffmpeg_tag and radarr_tag to ensure no missing dependencies.
@@ -86,14 +91,15 @@ Using the `build` tag leverages mulit-stage docker builds to generate FFMPEG com
 |---|---|---|
 |ffmpeg_tag|latest|Set tag to correspond to jrottenberg/ffmpeg:tag|
 |radarr_tag|latest|Set tag to correspond to linuxserver/radarr:tag|
+|extra_packages||Set additional packages/dependencies that might need to be installed via apt-get or apk, separated by spaces|
 
 ### VAAPI docker-compose sample
-~~~
+~~~yml
 services:
   radarr:
     container_name: radarr
     build:
       context: https://github.com/mdhiggins/radarr-sma.git#build
       args:
-        - ffmpeg_tag=4.2-vaapi
+        ffmpeg_tag: 4.4-vaapi2004
 ~~~
