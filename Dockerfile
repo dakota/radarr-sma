@@ -1,28 +1,57 @@
-ARG ffmpeg_tag=4.3-nvidia1804
+ARG ffmpeg_source=jrottenberg/ffmpeg
+ARG ffmpeg_tag=4.4-nvidia
 ARG radarr_tag=latest
-FROM jrottenberg/ffmpeg:${ffmpeg_tag} as ffmpeg
-FROM linuxserver/radarr:${radarr_tag}
+ARG extra_packages
+FROM ${ffmpeg_source}:${ffmpeg_tag} as ffmpeg
+
+RUN \
+  mkdir -p /build
+
+FROM lscr.io/linuxserver/radarr:${radarr_tag}
 LABEL maintainer="dakotairene"
 
 # Add files from ffmpeg
 COPY --from=ffmpeg /usr/local/ /usr/local/
+COPY --from=ffmpeg /build /
 
 ENV SMA_PATH /usr/local/sma
 ENV SMA_RS Radarr
 ENV SMA_UPDATE false
 ENV LD_LIBRARY_PATH /usr/local/cuda/lib64
+ENV SMA_HWACCEL true
 
-# get python3 and git, and install python libraries
 RUN \
-  apt-get update && \
-  apt-get install -y \
-    git \
-    wget \
-    python3 \
-    python3-pip && \
+  if [ -f /usr/bin/apt ]; then \
+    apt-get update && \
+    apt-get install -y \
+      git \
+      wget \
+      python3 \
+      python3-pip \
+      ${extra_packages} && \
+# cleanup
+    apt-get purge --auto-remove -y && \
+    apt-get clean && \
+    rm -rf \
+      /tmp/* \
+      /var/lib/apt/lists/* \
+      /var/tmp/*; \
+  elif [ -f /sbin/apk ]; then \
+    apk update && \
+    apk add --no-cache \
+      git \
+      wget \
+      python3 \
+      py3-pip \
+      ${extra_packages} && \
+# cleanup
+    apk del --purge && \
+    rm -rf \
+      /root/.cache \
+      /tmp/*; \
+  fi && \
 # make directory
   mkdir ${SMA_PATH} && \
-# download repo
   git clone https://github.com/mdhiggins/sickbeard_mp4_automator.git ${SMA_PATH} && \
 # install pip, venv, and set up a virtual self contained python environment
   python3 -m pip install --user --upgrade pip && \
@@ -33,22 +62,7 @@ RUN \
   chgrp users /usr/local/bin/ffmpeg && \
   chgrp users /usr/local/bin/ffprobe && \
   chmod g+x /usr/local/bin/ffmpeg && \
-  chmod g+x /usr/local/bin/ffprobe && \
-# cleanup
-  apt-get purge --auto-remove -y && \
-  apt-get clean && \
-  rm -rf \
-    /tmp/* \
-    /var/lib/apt/lists/* \
-    /var/tmp/*
-
-RUN \
-	apt-get update -y && \
-	apt-get install -y --no-install-recommends libva-drm2 libva2 && \
-  rm -rf \
-    /tmp/* \
-    /var/lib/apt/lists/* \
-    /var/tmp/*
+  chmod g+x /usr/local/bin/ffprobe
 
 EXPOSE 7878
 
